@@ -37,7 +37,20 @@ The data has been taken from the National Election Survey. Note that both ideolo
 
 Explore the data and see the variables for yourself. See if anything looks strange in the summary.
 
+```{r}
+summary(nes)
+```
+
+
 Create a scatterplot of our outcome variable `dvote` and a continuous predictor `income`. 
+
+```{r}
+nes %>%
+  ggplot(aes(x = income, y = dvote)) +
+  geom_jitter(alpha = 0.2) +
+  geom_smooth(method = "lm")
+```
+
 
 You might notice `geom_point()` doesn't give an intuitive graph since the points are so distinct. Try `geom_jitter()` instead. Use the arguments `alpha` and `height` to improve your plot.
 
@@ -50,20 +63,51 @@ Discuss whether a linear regression is appropriate for this. Is there a possibil
 
 **Prompt:** Let's fit a logistic regression model in which `dvote` is the dependent variable and `gender` and `income` are the independent variables. Do not add an interaction term. Name the model `model_1`. As we’ll see, the syntax for running a logistic regression in R is very similar to that for running a linear regression. In fact, we’ll follow the same basic steps:
 
+```{r}
+model_1 <- nes %>%
+  glm(dvote ~ gender + income, family = binomial, data = .)
+
+model_1 %>%
+  tidy(conf.int = TRUE) %>%
+  select(estimate, conf.low, conf.high) %>%
+  mutate(coef = estimate / 4)
+  
+``` 
+
+
 We first fit the logistic regression model using the `glm(y ~ x1 + x2, family, data)` function and save it as `model_1`.  
 
 We get the regression parameter estimates by applying the `tidy()` function from the broom package to `model_1`. Print the `term`, `estimate`, `conf.low`, and `conf.high` columns.  
 
+
+```{r}
+
+model_1 %>%
+  tidy(conf.int = TRUE) %>%
+  select(term, estimate, conf.low, conf.high)%>%
+  mutate(coef = estimate / 4)
+
+```
+
 Interpret the `estimate` column for "gendermale" and "income". Use the [divide-by-four rule](https://davidkane9.github.io/PPBDS/13-classification.html#one-categorical-explanatory-variable).
+
+> For males compared to females, the upper bound in the change in estimate gvote decreases by 3%.
+
+> For one unit increase in in income, the upper bound in the likelihood of voting democrat decreases by 7%
 
 Provide a Bayesian and a Frequentist interpretation of the confidence intervals for the estimate of the coefficient for `income`.
 
+> Bayesian interpretation: We are 95% confident that the true coefficients of the effect of income on the likelihood of voting democrat is in the confident interval.
+
+> Frequentist interpretation: If we generate infintiely many of these intervals we would capture the true coefficient 95% of the time
+
 Explain to your non-mathematical boss the relationship between income and preference for the Democratic candidate. Write this out as a sentence. Harder than it seems, isn't it?
+
+> The higher someone's income, the less likely they will vote for a democratic candidate
 
 Optional (very hard!): Interpret the `estimate` for (Intercept). What does it mean? Think back to how we interpreted regression intercepts in the last two weeks. You *might* need to use the `qlogis()` function.
 
-
-
+> In this case, the estimate for Intercept would not have a meaningful interpretation because there is no value for what it means when income = 0. However, if it did have an interpretable meaning, we would say that the likelihood of someone voting democrat with gendermale = 0 and income = 0 is 18%.
 
 # Scene 3
 
@@ -71,11 +115,24 @@ Optional (very hard!): Interpret the `estimate` for (Intercept). What does it me
 
 Use `augment()` from the **broom** package to get predictions from our model. You will need to set the `type.predict` and `data` arguments correctly.
 
+```{r}
+augment(x = model_1, data = nes, type.predict = "response")
+```
+
+
 What does the `.fitted` column means?
+
+> The fitted column is the predicted likelihood of voting democrat for each individual based on their gender and income.
 
 Why does `.fitted` have the same value for every male with income = 3? (First, show that this is in fact true. Then explain why?)
 
 
+```{r}
+augment(x = model_1, data = nes, type.predict = "response") %>%
+  filter(income == 3 & gender == "male")
+```
+
+> All males with income 3 will have the same value because those are the only two input variables.
 
 # Scene 4
 
